@@ -1,0 +1,101 @@
+/*General Styles Start*/
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+*::selection {
+    background-color: transparent;
+}
+
+html,
+body {
+    min-height: 100%;
+    overflow-x: hidden;
+    background-color: dimgrey;
+}
+
+a {
+    text-decoration: none;
+}
+
+.flex-centered {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/*main styles start*/
+
+main {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+h1 {
+    letter-spacing: 2px;
+    color: #202020;
+    box-shadow: 5px 5px 5px rgba(0,0,0,0.4);
+    padding: 10px;
+    background-color: whitesmoke;
+    border-radius: 8px;
+}
+
+/*form styles start*/
+
+.form-wrapper {
+    width: 80%;
+    height: 60%;
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    background-color: whitesmoke;
+    border-radius: 8px;
+    box-shadow: 5px 5px 5px rgba(0,0,0,0.4);
+}
+
+form {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-direction: column;
+    width: 40%;
+    height: 60%;
+    background-color: dimgrey;
+    border-radius: 8px;
+    box-shadow: 5px 5px 5px rgba(0,0,0,0.4);
+}
+
+label {
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: antiquewhite;
+}
+
+input {
+    width: 70%;
+    height: 30px;
+    border-radius: 5px;
+    padding-left: 5px;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: cadetblue;
+    color: antiquewhite;
+    font-size: 20px;
+    letter-spacing: 2px;
+    border-radius: 8px;
+    box-shadow: 5px 5px 5px rgba(0,0,0,0.4);
+    border: none;
+}
+
+button:hover {
+    cursor: pointer;
+}
