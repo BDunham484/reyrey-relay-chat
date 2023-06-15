@@ -49,6 +49,7 @@ app.get('/getSessName', (req, res) => {
 
 app.post('/relay', (req, res) => {
     console.info(`${req.method} request received to RELAY`);
+    let newParsedData;
 
     if (req.body.nickname) {
         //reads the current data contained within chat_db.json
@@ -60,9 +61,11 @@ app.post('/relay', (req, res) => {
 
                 if (parsedData.length) {
                     //if user already exists push new message.
-                    let newParsedData = parsedData.map((data) => {
+                    newParsedData = parsedData.map((data) => {
                         if (data.nickname === req.body.nickname) {
                             data.messages.sent.push(req.body.message)
+                        } else {
+                            data.messages.received.push(req.body.message)
                         }
                         return data
                     })
@@ -74,19 +77,15 @@ app.post('/relay', (req, res) => {
                                 `userData has been written to chat_db.json`
                             );
                     });
+                    const response = {
+                        status: 'success',
+                        body: newParsedData,
+                        ogMessage: req.body,
+                    }
+                    res.status(200).json(response);
                 }
             };
         });
-    };
-
-    if (req.body) {
-        const response = {
-            status: 'success',
-            body: req.body
-        }
-
-        console.log(response);
-        res.status(200).json(response);
     } else {
         alert(res.status(500).json("It's messed up, man"))
     }
@@ -96,7 +95,7 @@ app.post('/relay', (req, res) => {
 app.post('/changedUserRelay', (req, res) => {
     console.info(`${req.method} request received to /CHANGEDUSERRELAY`);
     console.log(req.body);
-
+    let newUser;
     if (req.body.nickname) {
         //reads the current data contained within chat_db.json
         fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
@@ -109,24 +108,48 @@ app.post('/changedUserRelay', (req, res) => {
                     //if user already exists push new message.
                     const newParsedData = parsedData.map((data) => {
                         if (data.nickname === req.body.nickname && data.loggedIn) {
-                            console.log('User is already logged in!');
+                            data.messages.received.push('USER IS ALREADY LOGGED IN')
                         } else if (data.nickname === req.body.nickname && !data.loggedIn) {
                             data.messages.sent.push(req.body.message)
                             data.loggedIn = true;
+                        } else {
+                            data.messages.received.push(req.body.message)
                         }
 
-                        if (data.nickanme === req.body.loggedInUser) {
-                            console.log('ITSALIVE')
-                            console.log(data.nickname)
-                            console.log(req.body.loggedInUser)
+                        if (data.nickname === req.body.loggedInUser) {
                             data.loggedIn = false;
-                        }
-
-
+                        };
                         return data
                     })
-                    console.log('THISISWHEREYOUWANTTOLOOK!!!!!!!!')
-                    console.log(newParsedData);
+
+                    const userCheck = newParsedData.map((data) => {
+                        if (data.nickname !== req.body.nickname) {
+                            return false;
+                        } else {
+                            return true;
+                        };
+                    });
+
+                    if (userCheck.includes(true)) {
+                        console.log('usercheck returns true')
+                    } else {
+                        newUser = {
+                            id: req.session.id,
+                            nickname: req.body.nickname,
+                            loggedIn: true,
+                            messages: {
+                                sent: [req.body.message],
+                                received: []
+                            }
+                        }
+                        newParsedData.push(newUser)
+                        //console.log('CHANGEDUSERRELAY - NEWUSER')
+                        //console.log(newUser)
+                    }
+
+                    //console.log('CHANGEDUSERRELAY - NEWPARSEDATA')
+                    //console.log(newParsedData)
+
                     fs.writeFile('./db/chat_db.json', JSON.stringify(newParsedData, null, '\t'), (writeErr) => {
                         writeErr
                             ? console.error(writeErr)
@@ -134,22 +157,19 @@ app.post('/changedUserRelay', (req, res) => {
                                 `userData has been written to chat_db.json`
                             );
                     });
+
+                    const response = {
+                        status: 'success',
+                        body: newParsedData
+                    }
+
+                    res.status(200).json(response)
+                } else {
+                    res.status(500).json("It's messed up, man.")
                 }
             };
         });
     };
-
-    if (req.body) {
-        const response = {
-            status: 'success',
-            body: req.body
-        }
-
-        console.log(response);
-        res.status(200).json(response);
-    } else {
-        alert(res.status(500).json("It's messed up, man"))
-    }
 });
 
 app.post('/status', (req, res) => {
@@ -302,6 +322,40 @@ app.post('/postUserData', (req, res) => {
         res.status(500).json('Error in posting data')
     }
 });
+
+app.get('/subscribe', (req, res) => {
+    console.info(`${req.method} request received to SUBSCRIBE`);
+    //reads the current data contained within chat_db.json
+    fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+        } else {
+            const parsedData = JSON.parse(data);
+            console.log('SUBSCRIBTION')
+            console.log(parsedData)
+            if (parsedData.length) {
+                //if user already exists push new message.
+                const newParsedData = parsedData.map((data) => {
+                    console.log('SUBSCRIPTIONMAPDATA:')
+                    console.log(data)
+                    if (data.loggedIn) {
+                        console.log(data.messages.received)
+                        const userMessages = {
+                            nickname: data.nickname,
+                            message: data.messages.received
+                        }
+                        return userMessages
+                    }
+                })
+                const filteredData = newParsedData.filter(data => data)
+                console.log('FILTEREDDATA')
+                console.log(filteredData)
+                res.json(filteredData)
+
+            }
+        };
+    });
+})
 
 //app.post('/postMessageData', (req, res) => {
 //    console.info(`${req.method} received to update message data`);

@@ -5,6 +5,33 @@ const nicknameOne = document.getElementById('nickname-one');
 const nicknameTwo = document.getElementById('nickname-two');
 
 
+const subscribe = async () => {
+    const currentUser = localStorage.getItem('nicknames')
+    try {
+        const res = await fetch('/subscribe', {
+            method: 'GET'
+        })
+        const data = await res.json();
+        //console.log(data);
+        //console.log('CURRENTUSER: ' + currentUser)
+        const newData = data.map((userData) => {
+            if (userData.nickname === currentUser) {
+                inputTwo.value = `${userData.nickname}: ${userData.message}`
+            }
+            //console.log(userData)
+        })
+        //inputTwo.value = data.body.message
+        //setTimeout(subscribe, 5000)
+    } catch (err) {
+        console.log(err);
+    }
+
+
+}
+
+subscribe();
+
+
 // route that gets specific username stored with each browser session and passes it to postUserData()
 const getSessName = async () => {
     try {
@@ -22,7 +49,6 @@ const getSessName = async () => {
         loggedInUser = data.nickname
         nicknameOne.value = data.nickname
 
-
         const userData = [
             {
                 nickname: localData
@@ -37,7 +63,6 @@ const getSessName = async () => {
                 },
             }
         ]
-
 
         localStorage.setItem('nicknames', loggedInUser)
         postUserData(userData)
@@ -68,13 +93,23 @@ const postText = async (userInput) => {
             const data = await res.json()
 
             const {
-                body: { nickname },
-                body: { message }
+                body: userData,
+                ogMessage: { nickname },
+                ogMessage: { message }
             } = data
+
+            console.log(userData)
+            //userData.map((data) => {
+            //    //console.log(data.messages.received[data.messages.received.length-1])
+            //    if (data.loggedIn) {
+            //        inputTwo.value = data.messages.received[data.messages.received.length - 1]
+            //    }
+            //})
 
             const newMessage = {
                 nickname,
-                message
+                message,
+                userData
             }
 
             return newMessage
@@ -82,10 +117,10 @@ const postText = async (userInput) => {
             console.log(err)
         }
     }
-
 }
 
 const postChangedUserText = async (userInput) => {
+    let newNickname = userInput.nickname
 
     if (!userInput.nickname) {
         alert("You must enter a nickname!")
@@ -100,17 +135,46 @@ const postChangedUserText = async (userInput) => {
             })
             const data = await res.json()
 
-            const {
-                body: { nickname },
-                body: { message }
-            } = data
-
-            const newMessage = {
-                nickname,
-                message
+            const { body } = data
+            //console.log('THISISHTEBODYDATAYOUWANTOTLOOKAT')
+            //console.log(body);
+            const confirm = body.map((data, index) => {
+                if (data.nickname === newNickname) {
+                    return index;
+                } else {
+                    return false;
+                };
+            });
+            //console.log(confirm)
+            let index = confirm.filter(data => data)
+            if (!index.length) {
+                index = 0;
             }
+            //console.log(index)
+            newNickname = body[index].nickname
+            //console.log(newNickname)
+            let messageIndex = (body[index].messages.sent.length) - 1
+            let message = body[index].messages.sent[messageIndex];
+            let receivedIndex = (body[index].messages.received.length) - 1
+            let received = body[index].messages.received[receivedIndex];
+            let oldNickname = localStorage.getItem('nicknames') || ''
+            //console.log('received: ' + received)
+            let newMessage
 
-            return newMessage
+            if (received === 'USER IS ALREADY LOGGED IN') {
+                alert('USER IS ALREADY LOGGED IN! TRY ANOTHER USER.')
+                nicknameOne.value = oldNickname;
+                newMessage = {
+                    newNickname: oldNickname,
+                    message: ''
+                }
+            } else {
+                newMessage = {
+                    newNickname: newNickname,
+                    message: message
+                }
+            }
+            return newMessage;
         } catch (err) {
             console.log(err)
         }
@@ -142,24 +206,6 @@ const postUserData = async (userData) => {
     };
 };
 
-//const postMessageData = async (userInput) => {
-//    try {
-//        const res = await fetch('/postMessageData', {
-//            method: 'POST',
-//            headers: {
-//                'Content-Type': 'application/json',
-//            },
-//            body: JSON.stringify(userInput)
-//        })
-//        const data = await res.json()
-//        console.log('POSTMESSAGEDATA')
-//        console.log(data)
-//    } catch (err) {
-//        console.error(err)
-//    }
-//}
-
-
 
 const submitOneHandler = (e) => {
     e.preventDefault();
@@ -171,10 +217,6 @@ const submitOneHandler = (e) => {
             'message': inputOne.value,
             'loggedInUser': localStorage.getItem('nicknames')
         }
-
-
-
-
 
         console.log('LOGGEDINUSER: ' + userInput.loggedInUser)
 
@@ -189,14 +231,11 @@ const submitOneHandler = (e) => {
                 .then((newMessage) => {
                     console.log('RETURNEDMESSAGEFORCHANGEDUSER')
                     console.log(newMessage)
+                    localStorage.setItem('nicknames', newMessage.newNickname)
+                    !newMessage.message ? inputTwo.value = '' : inputTwo.value = `${newMessage.newNickname}: ${newMessage.message}`
                 })
                 .catch((err) => console.error(err))
         }
-
-        //postMessageData(userInput)
-
-
-
         inputOne.value = '';
     }
 }
