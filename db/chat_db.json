@@ -1,0 +1,71 @@
+[
+	{
+		"id": "n8iTGZjnH34LYSkKshnChhQW_oqGyDe-",
+		"nickname": "user6",
+		"loggedIn": true,
+		"messages": {
+			"sent": [
+				"butts"
+			],
+			"received": []
+		}
+	},
+	{
+		"id": "2kflDGhgdtp_oVFEBZ1nY5FYDXi9wWtB",
+		"nickname": "user129",
+		"loggedIn": false,
+		"messages": {
+			"sent": [],
+			"received": []
+		}
+	},
+	{
+		"id": "b5HWt8QuUCSczcMZ1tSXDWGIotDKUlGh",
+		"nickname": "user789",
+		"loggedIn": false,
+		"messages": {
+			"sent": [],
+			"received": []
+		}
+	},
+	{
+		"id": "DMTv5hqsp-tXZQQCmtmLjgAP80MutVsd",
+		"nickname": "user236",
+		"loggedIn": true,
+		"messages": {
+			"sent": [
+				"test"
+			],
+			"received": []
+		}
+	},
+	{
+		"id": "FYj2FNfb9fS5i0qDAE2Yt3NUuoD2kRlR",
+		"nickname": "user565",
+		"loggedIn": true,
+		"messages": {
+			"sent": [
+				"butts"
+			],
+			"received": []
+		}
+	},
+	{
+		"id": "vH-EWTPDZPXw8nqfk_R5utroWfo2uMkx",
+		"nickname": "user35",
+		"loggedIn": false,
+		"messages": {
+			"sent": [],
+			"received": []
+		}
+	},
+	{
+		"id": "OQAg5EouA3ClABLlNkRqECrA5HRFKeVX",
+		"nickname": "user816",
+		"loggedIn": false,
+		"messages": {
+			"sent": [],
+			"received": []
+		}
+	}
+]

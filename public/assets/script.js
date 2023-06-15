@@ -99,18 +99,18 @@ const postChangedUserText = async (userInput) => {
                 body: JSON.stringify(userInput)
             })
             const data = await res.json()
+            console.log(data)
+            // const {
+            //     body: { nickname },
+            //     body: { message }
+            // } = data
 
-            const {
-                body: { nickname },
-                body: { message }
-            } = data
+            // const newMessage = {
+            //     nickname,
+            //     message
+            // }
 
-            const newMessage = {
-                nickname,
-                message
-            }
-
-            return newMessage
+            // return newMessage
         } catch (err) {
             console.log(err)
         }

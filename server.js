@@ -5,7 +5,7 @@ const { random_userName } = require('./utils/helpers');
 const fs = require('fs');
 
 const session = require('express-session');
-const MemoryStore = require('memorystore')(session)
+// const MemoryStore = require('memorystore')(session)
 
 
 const PORT = 3000;
@@ -17,9 +17,9 @@ const sess = {
     cookie: {},
     resave: false,
     saveUninitialized: true,
-    store: new MemoryStore({
-        checkPeriod: 86400000
-    })
+    // store: new MemoryStore({
+    //     checkPeriod: 86400000
+    // })
 }
 
 app.use(session(sess));
@@ -95,7 +95,7 @@ app.post('/relay', (req, res) => {
 
 app.post('/changedUserRelay', (req, res) => {
     console.info(`${req.method} request received to /CHANGEDUSERRELAY`);
-    console.log(req.body);
+    console.log(req.body.loggedInUser);
 
     if (req.body.nickname) {
         //reads the current data contained within chat_db.json
@@ -115,7 +115,7 @@ app.post('/changedUserRelay', (req, res) => {
                             data.loggedIn = true;
                         }
 
-                        if (data.nickanme === req.body.loggedInUser) {
+                        if (data.nickname === req.body.loggedInUser) {
                             console.log('ITSALIVE')
                             console.log(data.nickname)
                             console.log(req.body.loggedInUser)
@@ -134,19 +134,14 @@ app.post('/changedUserRelay', (req, res) => {
                                 `userData has been written to chat_db.json`
                             );
                     });
+                    const response = {
+                        status: 'success',
+                        body: newParsedData
+                    }
+                    res.status(200).json(response);
                 }
             };
         });
-    };
-
-    if (req.body) {
-        const response = {
-            status: 'success',
-            body: req.body
-        }
-
-        console.log(response);
-        res.status(200).json(response);
     } else {
         alert(res.status(500).json("It's messed up, man"))
     }
