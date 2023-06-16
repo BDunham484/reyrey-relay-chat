@@ -49,6 +49,9 @@ app.get('/getSessName', (req, res) => {
 
 app.post('/relay', (req, res) => {
     console.info(`${req.method} request received to RELAY`);
+    //console.log('RELAY INCOMING')
+    //console.log(req.body.message)
+
     let newParsedData;
 
     if (req.body.nickname) {
@@ -62,10 +65,14 @@ app.post('/relay', (req, res) => {
                 if (parsedData.length) {
                     //if user already exists push new message.
                     newParsedData = parsedData.map((data) => {
+                        const messageObj = {
+                            sender: req.body.nickname,
+                            message: req.body.message
+                        }
                         if (data.nickname === req.body.nickname) {
                             data.messages.sent.push(req.body.message)
-                        } else {
-                            data.messages.received.push(req.body.message)
+                        } else if (!data.blocked.includes(req.body.nickname)) {
+                            data.messages.received.push(messageObj)
                         }
                         return data
                     })
@@ -87,14 +94,67 @@ app.post('/relay', (req, res) => {
             };
         });
     } else {
-        alert(res.status(500).json("It's messed up, man"))
+        res.status(500).json("It's messed up, man")
     }
 });
+
+app.post('/relayTo', (req, res) => {
+    console.info(`${req.method} request received to RELAYTO`);
+    console.log(req.body);
+    let newParsedData;
+
+    if (req.body.to) {
+        fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
+            if (err) {
+                console.error(err);
+            } else {
+                const parsedData = JSON.parse(data);
+
+                if (parsedData.length) {
+                    //if the user exists, post message. else, return error message
+                    newParsedData = parsedData.map((data) => {
+                        const messageObj = {
+                            sender: req.body.nickname,
+                            message: req.body.message
+                        }
+                        if (data.nickname === req.body.nickname && data.blocked.includes(req.body.nickname)) {
+                            //data.messages.received.push(`${req.body.to} has blocked you.`)
+                        }
+
+                        if (data.nickname === req.body.to && !data.blocked.includes(req.body.nickname)) {
+                            data.messages.received.push(messageObj)
+                        }
+
+
+
+                        return data
+                    })
+
+                    fs.writeFile('./db/chat_db.json', JSON.stringify(newParsedData, null, '\t'), (writeErr) => {
+                        writeErr
+                            ? console.error(writeErr)
+                            : console.log(
+                                `userData has been written to chat_db.json`
+                            );
+                    });
+                    const response = {
+                        status: 'success',
+                        body: newParsedData,
+                        ogMessage: req.body,
+                    }
+                    res.status(200).json(response);
+                }
+            };
+        });
+    } else {
+        res.status(500).json('Danger Danger')
+    }
+})
 
 
 app.post('/changedUserRelay', (req, res) => {
     console.info(`${req.method} request received to /CHANGEDUSERRELAY`);
-    console.log(req.body);
+    /*console.log(req.body);*/
     let newUser;
     if (req.body.nickname) {
         //reads the current data contained within chat_db.json
@@ -107,13 +167,17 @@ app.post('/changedUserRelay', (req, res) => {
                 if (parsedData.length) {
                     //if user already exists push new message.
                     const newParsedData = parsedData.map((data) => {
+                        const messageObj = {
+                            sender: req.body.nickname,
+                            message: req.body.message
+                        }
                         if (data.nickname === req.body.nickname && data.loggedIn) {
                             data.messages.received.push('USER IS ALREADY LOGGED IN')
                         } else if (data.nickname === req.body.nickname && !data.loggedIn) {
                             data.messages.sent.push(req.body.message)
                             data.loggedIn = true;
-                        } else {
-                            data.messages.received.push(req.body.message)
+                        } else if (!data.blocked.includes(req.body.nickname)) {
+                            data.messages.received.push(messageObj)
                         }
 
                         if (data.nickname === req.body.loggedInUser) {
@@ -140,7 +204,8 @@ app.post('/changedUserRelay', (req, res) => {
                             messages: {
                                 sent: [req.body.message],
                                 received: []
-                            }
+                            },
+                            blocked: [],
                         }
                         newParsedData.push(newUser)
                         //console.log('CHANGEDUSERRELAY - NEWUSER')
@@ -172,9 +237,144 @@ app.post('/changedUserRelay', (req, res) => {
     };
 });
 
+app.post('/changedUserRelayTo', (req, res) => {
+    console.info(`${req.method} request received to /CHANGEDUSERRELAYTO`);
+    console.log(req.body)
+    let newUser;
+    if (req.body.to) {
+        //reads the current data contained within chat_db.json
+        fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
+            if (err) {
+                console.error(err);
+            } else {
+                const parsedData = JSON.parse(data);
+
+                if (parsedData.length) {
+                    //if user already exists push new message.
+                    const newParsedData = parsedData.map((data) => {
+                        if (data.blocked.includes(req.body.nickname)) {
+                            return `${req.body.to} has blocked you.`
+                        } else {
+                            const messageObj = {
+                                sender: req.body.nickname,
+                                message: req.body.message
+                            }
+                            if (data.nickname === req.body.nickname && data.loggedIn) {
+                                data.messages.received.push('USER IS ALREADY LOGGED IN')
+                            } else if (data.nickname === req.body.nickname && !data.loggedIn) {
+                                data.messages.sent.push(req.body.message)
+                                data.loggedIn = true;
+                            }
+
+                            if (data.nickname === req.body.to && !data.blocked.includes(req.body.nickname)) {
+                                data.messages.received.push(messageObj)
+                            }
+
+                            if (data.nickname === req.body.loggedInUser) {
+                                data.loggedIn = false;
+                            };
+                            return data
+                        }
+                    })
+
+                    const userCheck = newParsedData.map((data) => {
+                        if (data.nickname !== req.body.nickname) {
+                            return false;
+                        } else {
+                            return true;
+                        };
+                    });
+
+                    if (userCheck.includes(true)) {
+                        console.log('usercheck returns true')
+                    } else {
+                        newUser = {
+                            id: req.session.id,
+                            nickname: req.body.nickname,
+                            loggedIn: true,
+                            messages: {
+                                sent: [req.body.message],
+                                received: []
+                            },
+                            blocked: []
+                        }
+                        newParsedData.push(newUser)
+                        //console.log('CHANGEDUSERRELAY - NEWUSER')
+                        //console.log(newUser)
+                    }
+
+                    //console.log('CHANGEDUSERRELAY - NEWPARSEDATA')
+                    //console.log(newParsedData)
+
+                    fs.writeFile('./db/chat_db.json', JSON.stringify(newParsedData, null, '\t'), (writeErr) => {
+                        writeErr
+                            ? console.error(writeErr)
+                            : console.log(
+                                `userData has been written to chat_db.json`
+                            );
+                    });
+
+                    const response = {
+                        status: 'success',
+                        body: newParsedData
+                    }
+
+                    res.status(200).json(response)
+                } else {
+                    res.status(500).json("It's messed up, man.")
+                }
+            };
+        });
+    }
+})
+
+app.put('/blockUser', (req, res) => {
+    console.info(`${req.method} request received to update BLOCKUSER`)
+    console.log(req.body)
+    if (req.body.nickname) {
+        //reads the current data contained within chat_db.json
+        fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
+            if (err) {
+                console.error(err);
+            } else {
+                const parsedData = JSON.parse(data);
+                if (parsedData.length) {
+                    //if user already exists add user to block
+                    const newParsedData = parsedData.map((data) => {
+                        //console.log('STATUSMAPDATA:')
+                        //console.log(data)
+                        if (data.nickname === req.body.nickname) {
+                            data.blocked.push(req.body.userToBlock)
+                        }
+                        return data
+                    })
+                    //console.log('NEWPARSEDDATA')
+                    //console.log(newParsedData)
+                    //adds new messages to the appropriate user if exists. else, new user.
+                    fs.writeFile('./db/chat_db.json', JSON.stringify(newParsedData, null, '\t'), (writeErr) => {
+                        writeErr
+                            ? console.error(writeErr)
+                            : console.log(
+                                `newParsedData has been written to chat_db.json`
+                            );
+                    });
+
+                    const response = {
+                        status: 'success',
+                        body: newParsedData
+                    }
+                    res.status(200).json(response)
+                } else {
+                    res.status(500).json("It's messed up, man.")
+                }
+            };
+        });
+    };
+})
+
 app.post('/status', (req, res) => {
     console.info(`${req.method} request received to update STATUS`);
-    console.log(req.body.nickname)
+    //console.log(req.body.nickname)
 
     if (req.body.nickname) {
         //reads the current data contained within chat_db.json
@@ -186,15 +386,15 @@ app.post('/status', (req, res) => {
                 if (parsedData.length) {
                     //if user already exists push new message.
                     const newParsedData = parsedData.map((data) => {
-                        console.log('STATUSMAPDATA:')
-                        console.log(data)
+                        //console.log('STATUSMAPDATA:')
+                        //console.log(data)
                         if (data.nickname === req.body.nickname) {
                             data.loggedIn = false;
                         }
                         return data
                     })
-                    console.log('NEWPARSEDDATA')
-                    console.log(newParsedData)
+                    //console.log('NEWPARSEDDATA')
+                    //console.log(newParsedData)
                     //adds new messages to the appropriate user if exists. else, new user.
                     fs.writeFile('./db/chat_db.json', JSON.stringify(newParsedData, null, '\t'), (writeErr) => {
                         writeErr
@@ -230,10 +430,10 @@ app.post('/postUserData', (req, res) => {
     console.info(`${req.method} received to update user data.`);
     const oldUser = req.body[0].nickname
     const userData = req.body[1]
-    console.log(oldUser)
-    console.log(userData)
-    console.log('POSTUSERDATA');
-    console.log(req.body);
+    //console.log(oldUser)
+    //console.log(userData)
+    //console.log('POSTUSERDATA');
+    //console.log(req.body);
     if (userData.nickname) {
         //reads the current data contained within chat_db.json
         fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
@@ -253,8 +453,8 @@ app.post('/postUserData', (req, res) => {
                         }
                         return data
                     })
-                    console.log('NEWPARSEDDATA')
-                    console.log(newParsedData)
+                    /* console.log('NEWPARSEDDATA')*/
+                    //console.log(newParsedData)
                     newParsedData.push(userData)
                     //parsedData.push(userData);
 
@@ -289,15 +489,15 @@ app.post('/postUserData', (req, res) => {
                         //}); 
                         //if user already exists push new message.
                         const newParsedData = parsedData.map((data) => {
-                            console.log('STATUSMAPDATA:')
-                            console.log(data)
+                            //console.log('STATUSMAPDATA:')
+                            //console.log(data)
                             if (data.nickname === oldUser) {
                                 data.loggedIn = false;
                             }
                             return data
                         })
-                        console.log('NEWPARSEDDATA')
-                        console.log(newParsedData)
+                        //console.log('NEWPARSEDDATA')
+                        //console.log(newParsedData)
                         newParsedData.push(userData)
                         //parsedData.push(userData);
 
@@ -324,32 +524,32 @@ app.post('/postUserData', (req, res) => {
 });
 
 app.get('/subscribe', (req, res) => {
-    console.info(`${req.method} request received to SUBSCRIBE`);
+    //console.info(`${req.method} request received to SUBSCRIBE`);
     //reads the current data contained within chat_db.json
     fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
         if (err) {
             console.error(err);
         } else {
             const parsedData = JSON.parse(data);
-            console.log('SUBSCRIBTION')
-            console.log(parsedData)
+            //console.log('SUBSCRIBTION')
+            //console.log(parsedData)
             if (parsedData.length) {
                 //if user already exists push new message.
                 const newParsedData = parsedData.map((data) => {
-                    console.log('SUBSCRIPTIONMAPDATA:')
-                    console.log(data)
+                    //console.log('SUBSCRIPTIONMAPDATA:')
+                    //console.log(data)
                     if (data.loggedIn) {
-                        console.log(data.messages.received)
                         const userMessages = {
                             nickname: data.nickname,
-                            message: data.messages.received
+                            sent: data.messages.sent,
+                            received: data.messages.received,
                         }
                         return userMessages
                     }
                 })
                 const filteredData = newParsedData.filter(data => data)
-                console.log('FILTEREDDATA')
-                console.log(filteredData)
+                //console.log('FILTEREDDATA')
+                //console.log(filteredData)
                 res.json(filteredData)
 
             }

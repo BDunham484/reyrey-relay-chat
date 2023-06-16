@@ -6,9 +6,9 @@
     box-sizing: border-box;
 }
 
-*::selection {
-    background-color: transparent;
-}
+    *::selection {
+        background-color: transparent;
+    }
 
 html,
 body {
@@ -96,6 +96,21 @@ button {
     border: none;
 }
 
-button:hover {
-    cursor: pointer;
+    button:hover {
+        cursor: pointer;
+    }
+
+#input-two {
+    height: 50%;
+    border: 2px solid black;
+    color: whitesmoke;
+    background-color: #383737
+}
+
+#form-two {
+    justify-content: space-evenly;
+}
+
+#nickname-two {
+    border: 2px solid black;
 }
