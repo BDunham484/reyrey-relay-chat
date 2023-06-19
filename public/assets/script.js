@@ -49,7 +49,7 @@ const getSessName = async () => {
 
 getSessName();
 
-
+//get request that polls the db for the last received messages of the current user and diplays in incoming messages.
 const subscribe = async () => {
 
     const currentUser = localStorage.getItem('nicknames')
@@ -70,17 +70,17 @@ const subscribe = async () => {
                 //console.log(userData.received)
                 inputTwo.value = ` ${userData.received[userData.received.length - 1].sender}: ${userData.received[userData.received.length - 1].message}`
                 return userData.received[userData.received.length - 1]
+            } else {
+                return '';
             }
         })
+
         newData = newData.filter(data => data)
-        //console.log('SUBSCRIBE-NEWDATA')
-        //console.log(newData)
-        //if (newData.length) {
-        //    inputTwo.value = `${newData[0].sender}: ${newData[0].message}`
-        //}
-        //timer = setTimeout(subscribe, 10000)
+
+        timer = setTimeout(subscribe, 3000)
     } catch (err) {
-        console.log(err);
+        console.log(err)
+        subscribe()
     }
 };
 
@@ -128,6 +128,7 @@ const postText = async (userInput) => {
             return newMessage
         } catch (err) {
             console.log(err)
+            subscribe()
         }
     }
 }
@@ -150,11 +151,13 @@ const postTextTo = async (userInput) => {
             console.log(data)
             return data
         } catch (err) {
-            console.error(err);
+            console.error(err)
+            subscribe()
         };
     };
 };
 
+//if nickname is changed and new nickname doesn't already exist function creates new user and sends message to all. If nickname already exists it uses existing user.'
 const postChangedUserText = async (userInput) => {
     let newNickname = userInput.nickname
 
@@ -213,10 +216,12 @@ const postChangedUserText = async (userInput) => {
             return newMessage;
         } catch (err) {
             console.log(err)
+            subscribe()
         }
     }
 }
 
+//if nickname is changed and new nickname doesn't already exist function creates new user and sends message to specific resipient.  If nickname already exists it uses existing user.'
 const postChangedUserTextTo = async (userInput) => {
     let newNickname = userInput.nickname
 
@@ -232,7 +237,6 @@ const postChangedUserTextTo = async (userInput) => {
                 body: JSON.stringify(userInput)
             })
             const data = await res.json()
-
 
             const { body } = data
 
@@ -275,6 +279,7 @@ const postChangedUserTextTo = async (userInput) => {
             return newMessage;
         } catch (err) {
             console.error(err)
+            subscribe()
         };
     };
 };
@@ -297,6 +302,95 @@ const blockUser = async (userInput) => {
             return data
         } catch (err) {
             console.error(err)
+            subscribe()
+        }
+    }
+}
+
+const blockUserChangedNickname = async (userInput) => {
+    console.log('BLOCKUSERCHANGEDNICKNAME - USERINPUT')
+    console.log(userInput)
+    let newNickname = userInput.nickname
+
+    if (!newNickname) {
+        alert("You must enter a nickname!")
+    } else {
+        try {
+            const res = await fetch('/changedUserBlockUser', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userInput)
+            })
+            const data = await res.json()
+
+            const { body } = data
+
+            const confirm = body.map((data, index) => {
+                if (data.nickname === newNickname) {
+                    return index;
+                } else {
+                    return false;
+                };
+            });
+
+            let index = confirm.filter(data => data)
+            if (!index.length) {
+                index = 0;
+            }
+
+            newNickname = body[index].nickname
+
+            let messageIndex = (body[index].messages.sent.length) - 1
+            let message = body[index].messages.sent[messageIndex];
+            let receivedIndex = (body[index].messages.received.length) - 1
+            let received = body[index].messages.received[receivedIndex];
+            let oldNickname = localStorage.getItem('nicknames') || ''
+
+            let newMessage
+
+            if (received === 'USER IS ALREADY LOGGED IN') {
+                alert('USER IS ALREADY LOGGED IN! TRY ANOTHER USER.')
+                nicknameOne.value = oldNickname;
+                newMessage = {
+                    newNickname: oldNickname,
+                    message: ''
+                }
+            } else {
+                newMessage = {
+                    newNickname: newNickname,
+                    message: message
+                }
+            }
+            return newMessage;
+
+        } catch (err) {
+            console.error(err)
+            subscribe()
+        };
+    };
+};
+
+const unblockUser = async (userInput) => {
+    if (!userInput.nickname) {
+        alert('You must enter a nickname!')
+    } else {
+        try {
+            const res = await fetch('/unblockUser', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userInput)
+            })
+            const data = await res.json()
+            console.log('UNBLOCKDATA')
+            console.log(data)
+            return data
+        } catch (err) {
+            console.error(err)
+            subscribe()
         }
     }
 }
@@ -320,10 +414,52 @@ const postUserData = async (userData) => {
             console.log(data)
             return data
         } catch (err) {
-            console.log(err);
+            console.log(err)
+            subscribe()
         };
     };
 };
+
+//gets and returns a list of all loggedIn users
+const getUsers = async (userInput) => {
+    try {
+        const res = await fetch('/getUsers', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userInput)
+        })
+        const data = await res.json()
+        console.log('RETURNEDUSERDATA')
+        console.log(data);
+        //let stringData = data.join('\n');
+        //console.log(stringData)
+        //inputTwo.value = 'LOGGED-IN: \n' + stringData;
+        inputTwo.value = data
+    } catch (err) {
+        console.error(err)
+        subscribe()
+    }
+}
+
+const invalidCommand = async (userData) => {
+    try {
+        const res = await fetch('/invalidCommand', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData)
+        })
+        const data = await res.json()
+        console.log('RETURNED INVALID COMMAND DATA')
+        console.log(data)
+    } catch (err) {
+        console.log(err)
+        //subscribe()
+    }
+}
 
 
 const submitOneHandler = (e) => {
@@ -352,8 +488,14 @@ const submitOneHandler = (e) => {
                     .catch((err) => console.error(err))
             } else {
                 postChangedUserTextTo(userInputTo)
+                    .then((data) => {
+                        subscribe()
+                    })
+                    .catch((err) => console.error(err))
             }
-        } else if (messageArr[0] === '/ignore') {
+        }
+        //else if message has /ignore prefix
+        else if (messageArr[0] === '/ignore') {
             const userToBlock = messageArr[1]
             let userInput = {
                 'nickname': nicknameOne.value,
@@ -362,6 +504,56 @@ const submitOneHandler = (e) => {
             }
             if (userInput.nickname === userInput.loggedInUser) {
                 blockUser(userInput)
+                    .then((data) => {
+                        subscribe()
+                    })
+                    .catch((err) => console.error(err))
+            } else {
+                blockUserChangedNickname(userInput)
+            }
+        }
+        //else if message has /unignore prefix
+        else if (messageArr[0] === '/unignore') {
+            const userToUnblock = messageArr[1]
+            let userInput = {
+                'nickname': nicknameOne.value,
+                'userToUnblock': userToUnblock,
+                'loggedInUser': localStorage.getItem('nicknames')
+            }
+            if (userInput.nickname === userInput.loggedInUser) {
+                unblockUser(userInput)
+                    .then((data) => {
+                        subscribe()
+                    })
+                    .catch((err) => {
+                        console.error(err)
+                    })
+            }
+        }
+        //else if message has /users prefix
+        else if (messageArr[0] === '/users') {
+            let userInput = {
+                'nickname': nicknameOne.value,
+                'loggedInUser': localStorage.getItem('nicknames')
+            }
+            if (userInput.nickname === userInput.loggedInUser) {
+                getUsers(userInput)
+                    .then((data) => {
+                        subscribe()
+                    })
+            }
+        }
+        else if (messageArr[0][0] === '/') {
+            let userData = {
+                'nickname': nicknameOne.value,
+                'invalid': inputOne.value
+            }
+            console.log('INVALID COMMAND CAUGHT')
+            if (userData) {
+                invalidCommand(userData)
+                    .then((data) => {
+                        subscribe()
+                    })
             }
         }
         //else message does not have prefixes

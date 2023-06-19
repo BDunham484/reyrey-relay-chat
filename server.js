@@ -47,6 +47,8 @@ app.get('/getSessName', (req, res) => {
     res.json(req.session.profile)
 })
 
+
+//post message to all users
 app.post('/relay', (req, res) => {
     console.info(`${req.method} request received to RELAY`);
     //console.log('RELAY INCOMING')
@@ -98,6 +100,7 @@ app.post('/relay', (req, res) => {
     }
 });
 
+//post message to specific user
 app.post('/relayTo', (req, res) => {
     console.info(`${req.method} request received to RELAYTO`);
     console.log(req.body);
@@ -109,23 +112,44 @@ app.post('/relayTo', (req, res) => {
                 console.error(err);
             } else {
                 const parsedData = JSON.parse(data);
-
+                //checks to see if there is any data in the db
                 if (parsedData.length) {
+                    //let isSenderBlocked;
+                    //check to see if message recipient has blocked sender
+                    let isSenderBlocked = parsedData.map((data) => {
+                        if (data.nickname === req.body.to && data.blocked.includes(req.body.nickname)) {
+                            return true
+                        } else {
+                            return false
+                        }
+                    })
+                    isSenderBlocked.includes(true) ? isSenderBlocked = true : isSenderBlocked = false
+
+                    console.log('ISSENDERBLOCKED: ' + isSenderBlocked)
+
                     //if the user exists, post message. else, return error message
+                    //returned data is then rewritten to the db
                     newParsedData = parsedData.map((data) => {
-                        const messageObj = {
+                        let messageObj = {
                             sender: req.body.nickname,
                             message: req.body.message
                         }
-                        if (data.nickname === req.body.nickname && data.blocked.includes(req.body.nickname)) {
-                            //data.messages.received.push(`${req.body.to} has blocked you.`)
+                        if (data.nickname === req.body.nickname && isSenderBlocked) {
+                            messageObj = {
+                                sender: 'BLOCKED!',
+                                message: `${req.body.to} has blocked you.`
+                            }
+
+                            data.messages.received.push(messageObj)
                         }
 
                         if (data.nickname === req.body.to && !data.blocked.includes(req.body.nickname)) {
                             data.messages.received.push(messageObj)
                         }
 
-
+                        if (data.nickname === req.body.nickname) {
+                            data.messages.sent.push(req.body.message)
+                        }
 
                         return data
                     })
@@ -151,7 +175,7 @@ app.post('/relayTo', (req, res) => {
     }
 })
 
-
+//changed sender nickname and post message to all
 app.post('/changedUserRelay', (req, res) => {
     console.info(`${req.method} request received to /CHANGEDUSERRELAY`);
     /*console.log(req.body);*/
@@ -237,6 +261,7 @@ app.post('/changedUserRelay', (req, res) => {
     };
 });
 
+//changed sender nickname and post message to specific user
 app.post('/changedUserRelayTo', (req, res) => {
     console.info(`${req.method} request received to /CHANGEDUSERRELAYTO`);
     console.log(req.body)
@@ -328,6 +353,7 @@ app.post('/changedUserRelayTo', (req, res) => {
     }
 })
 
+//block a specific user
 app.put('/blockUser', (req, res) => {
     console.info(`${req.method} request received to update BLOCKUSER`)
     console.log(req.body)
@@ -372,6 +398,59 @@ app.put('/blockUser', (req, res) => {
     };
 })
 
+//unblock specific user
+app.put('/unblockUser', (req, res) => {
+    console.info(`${req.method} request received to update UNBLOCKUSER`)
+    console.log(req.body)
+    if (req.body.nickname) {
+        //reads the current data contained within chat_db.json
+        fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
+            if (err) {
+                console.error(err);
+            } else {
+                const parsedData = JSON.parse(data);
+                if (parsedData.length) {
+                    //if user already exists add user to block
+                    const newParsedData = parsedData.map((data) => {
+                        //console.log('STATUSMAPDATA:')
+                        //console.log(data)
+                        if (data.nickname === req.body.nickname &&
+                            data.blocked.includes(req.body.userToUnblock)) {
+                            let index = data.blocked.indexOf(req.body.userToUnblock)
+                            data.blocked.splice(index, 1)
+                        }
+
+                        //if (data.nickname === req.body.nickname) {
+                        //    data.blocked.pop(req.body.userToBlock)
+                        //}
+                        return data
+                    })
+                    //console.log('NEWPARSEDDATA')
+                    //console.log(newParsedData)
+                    //adds new messages to the appropriate user if exists. else, new user.
+                    fs.writeFile('./db/chat_db.json', JSON.stringify(newParsedData, null, '\t'), (writeErr) => {
+                        writeErr
+                            ? console.error(writeErr)
+                            : console.log(
+                                `newParsedData has been written to chat_db.json`
+                            );
+                    });
+
+                    const response = {
+                        status: 'success',
+                        body: newParsedData
+                    }
+                    res.status(200).json(response)
+                } else {
+                    res.status(500).json("It's messed up, man.")
+                }
+            };
+        });
+    };
+})
+
+
+//change user status from loggedIn true to false
 app.post('/status', (req, res) => {
     console.info(`${req.method} request received to update STATUS`);
     //console.log(req.body.nickname)
@@ -557,12 +636,92 @@ app.get('/subscribe', (req, res) => {
     });
 })
 
-//app.post('/postMessageData', (req, res) => {
-//    console.info(`${req.method} received to update message data`);
 
-//    console.log(req.body);
-//})
+app.put('/getUsers', (req, res) => {
+    console.info(`${req.method} request received to GETUSERS`)
+    console.log(req.body)
+    //reads the current data contained within chat_db.json and returns loggedIn users 
+    fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+        } else {
+            const parsedData = JSON.parse(data);
+            //console.log('SUBSCRIBTION')
+            //console.log(parsedData)
+            if (parsedData.length) {
+                //if user already exists push new message.
+                let newParsedData = parsedData.map((data) => {
+                    //console.log('SUBSCRIPTIONMAPDATA:')
+                    //console.log(data)
+                    if (data.loggedIn) {
+                        return data.nickname
+                    }
+                })
+                let filteredData = newParsedData.filter(data => data)
 
+                const usersString = 'LOGGED-IN: \n' + filteredData.join('\n')
+
+                let reParsedData = parsedData.map((data) => {
+                    if (data.nickname === req.body.nickname) {
+                        let messageObj = {
+                            sender: req.body.nickname,
+                            message: usersString
+                        }
+                        data.messages.received.push(messageObj)
+                    }
+                    return data
+                })
+
+                fs.writeFile('./db/chat_db.json', JSON.stringify(reParsedData, null, '\t'), (writeErr) => {
+                    writeErr
+                        ? console.error(writeErr)
+                        : console.log(
+                            `if userData has been written to chat_db.json`
+                        );
+                });
+
+                res.json(usersString)
+            }
+        };
+    });
+})
+
+app.put('/invalidCommand', (req, res) => {
+    console.info(`${req.method} request received to INVALIDCOMMAND`)
+    console.log(req.body)
+    fs.readFile('./db/chat_db.json', 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+        } else {
+            const parsedData = JSON.parse(data);
+
+            if (parsedData.length) {
+
+                let newParsedData = parsedData.map((data) => {
+                    if (data.nickname === req.body.nickname) {
+                        let messageObj = {
+                            sender: req.body.nickname,
+                            message: `${req.body.invalid} is an invalid command!`
+                        }
+                        data.messages.received.push(messageObj)
+                    }
+
+                    return data
+                })
+
+                fs.writeFile('./db/chat_db.json', JSON.stringify(newParsedData, null, '\t'), (writeErr) => {
+                    writeErr
+                        ? console.error(writeErr)
+                        : console.log(
+                            `if userData has been written to chat_db.json`
+                        );
+                });
+
+                res.json(newParsedData)
+            }
+        };
+    });
+})
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}!`);

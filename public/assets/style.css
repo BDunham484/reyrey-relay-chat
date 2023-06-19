@@ -102,9 +102,12 @@ button {
 
 #input-two {
     height: 50%;
+    width: 75%;
     border: 2px solid black;
     color: whitesmoke;
-    background-color: #383737
+    background-color: #383737;
+    border-radius: 5px;
+    padding: 10px;
 }
 
 #form-two {
